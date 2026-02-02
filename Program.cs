@@ -38,7 +38,7 @@ if (app.Environment.IsDevelopment())
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("cors", p =>
-        p.WithOrigins("https://YOUR-FRONT.vercel.app")
+        p.WithOrigins("frontend-production-90b6.up.railway.app")
          .AllowAnyHeader()
          .AllowAnyMethod());
 });
