@@ -1,15 +1,14 @@
-name: CI/CD - Backend (.NET)
+name: CI - Backend (.NET) + Cross Trigger Frontend
 
 on:
   push:
-    branches: ["main"]
   pull_request:
   workflow_dispatch:
   repository_dispatch:
     types: ["sync-ci"]
 
 concurrency:
-  group: backend-${{ github.event_name }}-${{ github.ref || github.event.client_payload.ref || github.run_id }}
+  group: backend-${{ github.event_name }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -19,8 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -33,26 +31,31 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
-      - name: Publish
-        run: dotnet publish -c Release --no-build -o publish
+      - name: Test (optional)
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          tests=(**/*Tests.csproj)
+          if [ ${#tests[@]} -gt 0 ]; then
+            dotnet test -c Release --no-build
+          else
+            echo "No test projects found. Skipping tests."
+          fi
 
-      - name: Upload publish artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-publish
-          path: publish/**
-
-  trigger-frontend:
+  dispatch-frontend:
     needs: build
     runs-on: ubuntu-latest
-    # Trigger للريبو التاني فقط لو push على main (عشان ما يحصلش loop)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    if: >
+      (github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
     steps:
-      - name: Trigger Frontend workflow
+      - name: Trigger Frontend CI (repository_dispatch)
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CROSS_REPO_TOKEN }}
           repository: ASV47/Frontend
           event-type: sync-ci
           client-payload: >
-            {"source":"backend","sha":"${{ github.sha }}","ref":"${{ github.ref }}"}
+            {"source":"backend","event":"${{ github.event_name }}","sha":"${{ github.sha }}","ref":"${{ github.ref }}"}
