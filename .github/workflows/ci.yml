@@ -1,0 +1,69 @@
+name: CI/CD - Backend (.NET)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  repository_dispatch:
+    types: ["sync-ci"]
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      # اختياري: هيشتغل بس لو فيه مشاريع Tests
+      - name: Test (if exists)
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          tests=(**/*Tests.csproj)
+          if [ ${#tests[@]} -gt 0 ]; then
+            dotnet test -c Release --no-build
+          else
+            echo "No test projects found. Skipping tests."
+          fi
+
+      - name: Publish
+        run: dotnet publish -c Release -o out
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-publish
+          path: out/**
+
+  trigger-frontend:
+    needs: build
+    runs-on: ubuntu-latest
+
+    # نفس فكرة منع الـ loop
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger Frontend workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          repository: ASV47/Frontend
+          event-type: sync-ci
+          client-payload: >
+            {"source":"backend","sha":"${{ github.sha }}","ref":"${{ github.ref }}"}
