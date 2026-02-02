@@ -35,6 +35,22 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", p =>
+        p.WithOrigins(
+            "http://localhost:4200",
+            "https://asv47.github.io"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+    );
+});
+
+var app = builder.Build();
+
+app.UseCors("CorsPolicy");
+
 app.UseCors("cors");
 app.MapGet("/healthz", () => Results.Ok("ok"));
 app.UseHttpsRedirection();
