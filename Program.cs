@@ -46,6 +46,13 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod()
     );
 });
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    // Railway expects the app to listen on this PORT
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 
 
 app.UseCors("CorsPolicy");
