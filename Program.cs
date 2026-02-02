@@ -35,7 +35,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.MapGet("/healthz", () => Results.Ok("ok"));
 app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 app.MapControllers();
