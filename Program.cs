@@ -35,6 +35,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("cors", p =>
+        p.WithOrigins("https://YOUR-FRONT.vercel.app")
+         .AllowAnyHeader()
+         .AllowAnyMethod());
+});
+
+app.UseCors("cors");
+
 app.MapGet("/healthz", () => Results.Ok("ok"));
 app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
